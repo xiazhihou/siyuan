@@ -92,6 +92,10 @@ func getChangelog(c *gin.Context) {
 	ret.Data = data
 }
 
+// getEmojiConf 获取表情配置信息，包括系统默认表情和自定义表情。
+// 该函数首先读取系统默认的表情配置文件 conf.json，然后检查自定义表情目录，
+// 如果存在自定义表情，则将其添加到配置列表的开头。
+// 最终返回合并后的表情配置列表。
 func getEmojiConf(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -412,9 +416,18 @@ func importConf(c *gin.Context) {
 	logging.LogInfof("imported conf")
 }
 
+// getConf 处理获取配置信息的请求。
+// 该函数首先尝试获取掩码后的配置信息，如果失败则返回错误信息。
+// 接着根据同步配置和角色权限设置相关字段。
+// 最后返回包含配置信息、启动状态和发布状态的响应。
 func getConf(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
+
+	user := model.GetGinContextUser(c)
+	logging.LogInfof("get current GetGinContextUser: %s", user)
+	// 初始化用户目录
+	util.InitPathDirByUser(user)
 
 	maskedConf, err := model.GetMaskedConf()
 	if err != nil {
@@ -477,6 +490,10 @@ func setUILayout(c *gin.Context) {
 	model.Conf.Save()
 }
 
+// setAPIToken 设置API令牌。从请求中获取令牌并保存到配置中。
+// 该函数处理HTTP请求，并使用Gin框架的上下文对象。
+// 它首先尝试解析请求中的JSON参数，如果成功，则更新全局API配置的令牌并保存配置。
+// 如果解析失败，将返回错误响应。
 func setAPIToken(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -491,6 +508,10 @@ func setAPIToken(c *gin.Context) {
 	model.Conf.Save()
 }
 
+// setAccessAuthCode 设置访问授权码，并更新相关会话信息。
+// 该函数首先从请求中获取访问授权码，如果与掩码后的授权码相同，则使用配置中的授权码。
+// 更新配置文件中的授权码，并保存会话及工作区会话中的授权码。
+// 最后，异步执行UI重载操作。
 func setAccessAuthCode(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -519,6 +540,10 @@ func setAccessAuthCode(c *gin.Context) {
 	return
 }
 
+// setFollowSystemLockScreen 设置系统锁屏模式。
+// 该函数接收一个gin.Context对象，从中解析出锁屏模式的参数，并更新系统配置。
+// 如果解析参数失败，将返回错误信息。
+// 更新成功后，系统配置将被保存。
 func setFollowSystemLockScreen(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -555,6 +580,10 @@ func currentTime(c *gin.Context) {
 	ret.Data = util.CurrentTimeMillis()
 }
 
+// bootProgress 处理获取系统启动进度的请求。
+// 它调用 util.GetBootProgressDetails 获取启动进度和详细信息，
+// 然后将这些信息封装到返回结果中，并通过 JSON 响应给客户端。
+
 func bootProgress(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -563,6 +592,11 @@ func bootProgress(c *gin.Context) {
 	ret.Data = map[string]interface{}{"progress": progress, "details": details}
 }
 
+// setAppearanceMode 设置系统的外观模式。
+// 该函数接收一个gin的上下文对象，从中解析出外观模式参数，并更新配置文件中的外观设置。
+// 如果模式为0，则表示浅色主题，检查并设置浅色主题的theme.js文件是否存在；
+// 如果模式不为0，则表示深色主题，检查并设置深色主题的theme.js文件是否存在。
+// 最后，保存配置并返回更新后的外观设置。
 func setAppearanceMode(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -634,6 +668,10 @@ func setUploadErrLog(c *gin.Context) {
 	time.Sleep(time.Second * 3)
 }
 
+// setAutoLaunch 设置系统是否随系统启动的配置。
+// 该函数接收一个gin.Context对象，从中解析出autoLaunch参数，并更新系统配置。
+// 如果autoLaunch参数解析失败，将返回错误响应。
+// 更新成功后，会保存系统配置。
 func setAutoLaunch(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -707,7 +745,7 @@ func exit(c *gin.Context) {
 	}
 
 	execInstallPkgArg := arg["execInstallPkg"] // 0：默认检查新版本，1：不执行新版本安装，2：执行新版本安装
-	execInstallPkg := 0
+	execInstallPkg := 1
 	if nil != execInstallPkgArg {
 		execInstallPkg = int(execInstallPkgArg.(float64))
 	}

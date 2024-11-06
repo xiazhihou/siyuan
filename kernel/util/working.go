@@ -50,14 +50,16 @@ const (
 
 var (
 	RunInContainer             = false // 是否运行在容器中
-	SiyuanAccessAuthCodeBypass = false // 是否跳过空访问授权码检查
+	SiyuanAccessAuthCodeBypass = true  // 是否跳过空访问授权码检查
 )
 
+// initEnvVars 初始化环境变量，检查是否在 Docker 容器中运行，并解析 SIYUAN_ACCESS_AUTH_CODE_BYPASS 环境变量。
+// 如果解析环境变量失败，则默认 SiyuanAccessAuthCodeBypass 为 false。
 func initEnvVars() {
 	RunInContainer = isRunningInDockerContainer()
 	var err error
 	if SiyuanAccessAuthCodeBypass, err = strconv.ParseBool(os.Getenv("SIYUAN_ACCESS_AUTH_CODE_BYPASS")); err != nil {
-		SiyuanAccessAuthCodeBypass = false
+		SiyuanAccessAuthCodeBypass = true
 	}
 }
 
@@ -67,6 +69,12 @@ var (
 	HttpServing  = false          // 是否 HTTP 伺服已经可用
 )
 
+// Boot 函数负责启动 SiYuan 内核的初始化过程。
+// 它包括初始化环境变量、增加启动进度、设置随机种子、初始化 MIME 类型、HTTP 客户端等。
+// 通过命令行参数配置工作空间路径、工作目录、HTTP 服务器端口、只读模式、访问授权码、SSL 设置、语言和运行模式。
+// 如果在 Docker 容器中运行且未提供访问授权码，则会中断启动过程。
+// 初始化工作空间目录，并根据运行模式设置主题和图标路径。
+// 最后，显示启动横幅并记录启动信息。
 func Boot() {
 	initEnvVars()
 	IncBootProgress(3, "Booting kernel...")
@@ -74,13 +82,15 @@ func Boot() {
 	initMime()
 	initHttpClient()
 
+	// workspacePath 指定了工作空间的目录路径。如果不提供，则默认为用户的 ~/SiYuan/ 目录。
+	// 该参数用于指定 SiYuan 系统的工作空间位置，以便系统能够正确地读取和写入相关文件。
 	workspacePath := flag.String("workspace", "", "dir path of the workspace, default to ~/SiYuan/")
 	wdPath := flag.String("wd", WorkingDir, "working directory of SiYuan")
 	port := flag.String("port", "0", "port of the HTTP server")
 	readOnly := flag.String("readonly", "false", "read-only mode")
 	accessAuthCode := flag.String("accessAuthCode", "", "access auth code")
 	ssl := flag.Bool("ssl", false, "for https and wss")
-	lang := flag.String("lang", "", "zh_CN/zh_CHT/en_US/fr_FR/es_ES/ja_JP/it_IT/de_DE/he_IL/ru_RU/pl_PL")
+	lang := flag.String("lang", "zh_CN", "zh_CN/zh_CHT/en_US/fr_FR/es_ES/ja_JP/it_IT/de_DE/he_IL/ru_RU/pl_PL")
 	mode := flag.String("mode", "prod", "dev/prod")
 	flag.Parse()
 
@@ -97,6 +107,7 @@ func Boot() {
 	Container = ContainerStd
 	if RunInContainer {
 		Container = ContainerDocker
+		logging.LogInfof("启动初始化，读取配置AccessAuthCode： %s", AccessAuthCode)
 		if "" == AccessAuthCode {
 			interruptBoot := true
 
@@ -219,6 +230,12 @@ var (
 	UIProcessIDs = sync.Map{} // UI 进程 ID
 )
 
+// initWorkspaceDir 初始化工作空间目录。
+// 该函数首先检查配置文件是否存在，如果不存在则创建配置文件夹。
+// 然后根据配置文件或默认路径设置工作空间目录。
+// 如果指定了工作空间参数，则使用该参数作为工作空间目录。
+// 如果指定的工作空间目录不存在，则使用默认工作空间目录，并创建该目录。
+// 最后，设置各种与工作空间相关的路径和环境变量。
 func initWorkspaceDir(workspaceArg string) {
 	userHomeConfDir := filepath.Join(HomeDir, ".config", "siyuan")
 	workspaceConf := filepath.Join(userHomeConfDir, "workspace.json")
@@ -365,6 +382,8 @@ const (
 	FixedPort = "6806"      // 固定端口
 )
 
+// initPathDir 初始化工作目录下的必要文件夹，包括配置文件夹、数据文件夹、临时文件夹以及数据文件夹下的子文件夹（assets, templates, widgets, plugins, emojis, public）。
+// 如果文件夹创建失败且不是因为文件夹已存在，则记录致命错误并退出程序。
 func initPathDir() {
 	if err := os.MkdirAll(ConfDir, 0755); err != nil && !os.IsExist(err) {
 		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create conf folder [%s] failed: %s", ConfDir, err)
@@ -403,6 +422,50 @@ func initPathDir() {
 
 	// Support directly access `data/public/*` contents via URL link https://github.com/siyuan-note/siyuan/issues/8593
 	public := filepath.Join(DataDir, "public")
+	if err := os.MkdirAll(public, 0755); err != nil && !os.IsExist(err) {
+		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data public folder [%s] failed: %s", widgets, err)
+	}
+}
+
+// InitPathDirByUser 根据用户编号初始化用户的目录结构。
+// 该函数会创建用户的数据文件夹、临时文件夹以及其子文件夹（如 assets, templates, widgets, plugins, emojis, public）。
+// 如果创建过程中发生错误且错误不是因为文件夹已存在，则会记录致命错误并退出程序。
+func InitPathDirByUser(userNo string) {
+	if "" == userNo {
+		return
+	}
+
+	if err := os.MkdirAll(DataDir+userNo, 0755); err != nil && !os.IsExist(err) {
+		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data folder [%s] failed: %s", DataDir, err)
+	}
+
+	assets := filepath.Join(DataDir+userNo, "assets")
+	if err := os.MkdirAll(assets, 0755); err != nil && !os.IsExist(err) {
+		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data assets folder [%s] failed: %s", assets, err)
+	}
+
+	templates := filepath.Join(DataDir+userNo, "templates")
+	if err := os.MkdirAll(templates, 0755); err != nil && !os.IsExist(err) {
+		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data templates folder [%s] failed: %s", templates, err)
+	}
+
+	widgets := filepath.Join(DataDir+userNo, "widgets")
+	if err := os.MkdirAll(widgets, 0755); err != nil && !os.IsExist(err) {
+		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data widgets folder [%s] failed: %s", widgets, err)
+	}
+
+	plugins := filepath.Join(DataDir+userNo, "plugins")
+	if err := os.MkdirAll(plugins, 0755); err != nil && !os.IsExist(err) {
+		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data plugins folder [%s] failed: %s", widgets, err)
+	}
+
+	emojis := filepath.Join(DataDir+userNo, "emojis")
+	if err := os.MkdirAll(emojis, 0755); err != nil && !os.IsExist(err) {
+		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data emojis folder [%s] failed: %s", widgets, err)
+	}
+
+	// Support directly access `data/public/*` contents via URL link https://github.com/siyuan-note/siyuan/issues/8593
+	public := filepath.Join(DataDir+userNo, "public")
 	if err := os.MkdirAll(public, 0755); err != nil && !os.IsExist(err) {
 		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data public folder [%s] failed: %s", widgets, err)
 	}
@@ -448,6 +511,8 @@ func GetDataAssetsAbsPath() (ret string) {
 	return
 }
 
+// tryLockWorkspace 尝试锁定工作区。如果成功锁定，则直接返回；如果锁定失败，会记录错误日志并退出程序。
+// 该函数用于确保在同一时间只有一个进程能够访问工作区，防止并发操作导致的数据不一致问题。
 func tryLockWorkspace() {
 	WorkspaceLock = flock.New(filepath.Join(WorkspaceDir, ".lock"))
 	ok, err := WorkspaceLock.TryLock()

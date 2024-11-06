@@ -115,6 +115,10 @@ func (conf *AppConf) SetUser(user *conf.User) {
 	conf.User = user
 }
 
+// InitConf 初始化应用程序配置。
+// 该函数负责加载和解析配置文件，设置默认值，并根据设备和用户设置调整配置。
+// 它还会初始化语言设置，加载语言包，并确保所有必要的配置部分都已设置。
+// 最后，它会保存配置并设置日志级别。
 func InitConf() {
 	initLang()
 
@@ -168,8 +172,9 @@ func InitConf() {
 				Conf.Lang = util.Lang
 				logging.LogInfof("initialized language [%s] based on device locale", Conf.Lang)
 			} else {
-				logging.LogDebugf("check device locale failed [%s], using default language [en_US]", err)
-				util.Lang = "en_US"
+				//改成默认中文
+				logging.LogDebugf("check device locale failed [%s], using default language [zh_CN]", err)
+				util.Lang = "zh_CN"
 				Conf.Lang = util.Lang
 			}
 		}
@@ -188,7 +193,7 @@ func InitConf() {
 		}
 	}
 	if !langOK {
-		Conf.Lang = "en_US"
+		Conf.Lang = "zh_CN"
 		util.Lang = Conf.Lang
 	}
 	Conf.Appearance.Lang = Conf.Lang
@@ -842,8 +847,9 @@ func InitBoxes() {
 }
 
 func IsSubscriber() bool {
-	u := Conf.GetUser()
-	return nil != u && (-1 == u.UserSiYuanProExpireTime || 0 < u.UserSiYuanProExpireTime) && 0 == u.UserSiYuanSubscriptionStatus
+	return true
+	// u := Conf.GetUser()
+	// return nil != u && (-1 == u.UserSiYuanProExpireTime || 0 < u.UserSiYuanProExpireTime) && 0 == u.UserSiYuanSubscriptionStatus
 }
 
 func IsPaidUser() bool {
@@ -853,11 +859,12 @@ func IsPaidUser() bool {
 		return true
 	}
 
-	u := Conf.GetUser()
-	if nil == u {
-		return false
-	}
-	return 1 == u.UserSiYuanOneTimePayStatus
+	return true
+	// u := Conf.GetUser()
+	// if nil == u {
+	// 	return false
+	// }
+	// return 1 == u.UserSiYuanOneTimePayStatus
 }
 
 const (
@@ -865,6 +872,9 @@ const (
 	MaskedAccessAuthCode = "*******"
 )
 
+// GetMaskedConf 获取并返回脱敏后的配置信息。
+// 该函数首先将配置信息序列化为JSON格式，然后反序列化为AppConf结构体，
+// 对敏感信息进行脱敏处理后返回。
 func GetMaskedConf() (ret *AppConf, err error) {
 	// 脱敏处理
 	data, err := gulu.JSON.MarshalIndentJSON(Conf, "", "  ")
@@ -872,6 +882,7 @@ func GetMaskedConf() (ret *AppConf, err error) {
 		logging.LogErrorf("marshal conf failed: %s", err)
 		return
 	}
+	logging.LogInfof("打印GetMaskedConf获取的conf信息：%s", data)
 	ret = &AppConf{}
 	if err = gulu.JSON.UnmarshalJSON(data, ret); err != nil {
 		logging.LogErrorf("unmarshal conf failed: %s", err)

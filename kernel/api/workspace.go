@@ -84,6 +84,10 @@ func checkWorkspaceDir(c *gin.Context) {
 	}
 }
 
+// createWorkspaceDir 创建一个新的工作区目录。
+// 它首先验证请求参数中的路径是否有效，然后检查该路径是否存在。
+// 如果不存在，则创建该目录。接着，将新路径添加到工作区路径列表中，并保存更新后的列表。
+// 如果过程中出现任何错误，它将返回相应的错误信息。
 func createWorkspaceDir(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)

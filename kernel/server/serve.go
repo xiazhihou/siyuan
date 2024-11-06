@@ -61,6 +61,11 @@ var (
 	}
 )
 
+// Serve 启动 HTTP 服务器，配置各种中间件和处理函数。
+// 根据 fastMode 参数决定是否在启动失败时快速返回。
+// 服务器监听的地址和端口根据配置和环境变量决定。
+// 在非 fastMode 下，启动失败会记录错误并退出程序。
+// 服务器启动后，会初始化一些后台服务，并启动 UI 加载完成的钩子。
 func Serve(fastMode bool) {
 	gin.SetMode(gin.ReleaseMode)
 	ginServer := gin.New()
@@ -236,6 +241,12 @@ func serveSnippets(ginServer *gin.Engine) {
 	})
 }
 
+// serveAppearance 设置了处理外观相关请求的路由。
+// 它首先定义了一个中间件组 siyuan，该组会检查用户的认证状态。
+// 对于根路径 "/" 的 GET 请求，它会根据 User-Agent 头部重定向到不同的构建版本（移动、桌面或平板）。
+// 对于 "/appearance/*filepath" 路径的 GET 请求，它会提供外观文件，如果请求的是主题 js 文件且不存在，则返回空内容。
+// 如果请求的是多语言配置文件且缺失，它会用英文配置文件的内容补齐。
+// 最后，它为 "/stage/" 路径设置了静态文件服务。
 func serveAppearance(ginServer *gin.Engine) {
 	siyuan := ginServer.Group("", model.CheckAuth)
 

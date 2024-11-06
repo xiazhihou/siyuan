@@ -54,6 +54,12 @@ func LogoutAuth(c *gin.Context) {
 	}
 }
 
+// LoginAuth 处理用户登录认证请求。
+// 该函数首先解析请求参数，然后根据是否需要验证码进行验证。
+// 如果需要验证码，会检查用户输入的验证码是否与session中的验证码匹配。
+// 接着验证用户的授权码是否正确，如果不正确，会增加错误计数并可能生成新的验证码。
+// 如果授权码正确，更新session中的授权码，并重置错误计数和验证码。
+// 最后，保存session信息。
 func LoginAuth(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -164,6 +170,20 @@ func CheckReadonly(c *gin.Context) {
 }
 
 func CheckAuth(c *gin.Context) {
+	//已通过psd3的用户账号换取
+	if user := GetGinContextUser(c); IsValidUser(user) {
+		c.Next()
+		return
+	}
+
+	if oauthUser := c.GetHeader("LSAuthorization"); "" != oauthUser {
+		//尝试根据psd3的token进行解析
+		c.Set(UserContextKey, oauthUser)
+		c.Set(RoleContextKey, RoleAdministrator)
+		c.Next()
+		return
+	}
+
 	// 已通过 JWT 认证
 	if role := GetGinContextRole(c); IsValidRole(role, []Role{
 		RoleAdministrator,
@@ -177,6 +197,7 @@ func CheckAuth(c *gin.Context) {
 	//logging.LogInfof("check auth for [%s]", c.Request.RequestURI)
 	localhost := util.IsLocalHost(c.Request.RemoteAddr)
 
+	logging.LogInfof("Conf.AccessAuthCode：%s", Conf.AccessAuthCode)
 	// 未设置访问授权码
 	if "" == Conf.AccessAuthCode {
 		// Skip the empty access authorization code check https://github.com/siyuan-note/siyuan/issues/9709

@@ -20,6 +20,7 @@ import (
 	"github.com/88250/gulu"
 	ginSessions "github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/siyuan-note/logging"
 )
 
 var WrongAuthCount int
@@ -50,6 +51,9 @@ func (sd *SessionData) Save(c *gin.Context) error {
 }
 
 // GetSession returns session of the specified context.
+// GetSession 从gin的上下文中获取会话数据。
+// 如果会话数据不存在或解析失败，则返回一个新的SessionData实例。
+// 成功获取并解析会话数据后，将其设置到gin上下文的"session"键中，并返回该会话数据。
 func GetSession(c *gin.Context) *SessionData {
 	ret := &SessionData{}
 
@@ -65,9 +69,14 @@ func GetSession(c *gin.Context) *SessionData {
 	}
 
 	c.Set("session", ret)
+	logging.LogInfof("get session: %s", ret)
 	return ret
 }
 
+// GetWorkspaceSession 根据给定的 SessionData 获取或创建一个 WorkspaceSession。
+// 如果 session.Workspaces 为空，则初始化一个空的 map。
+// 如果 session.Workspaces 中不存在 WorkspaceDir 对应的 WorkspaceSession，则创建一个新的并存储。
+// 返回对应的 WorkspaceSession。
 func GetWorkspaceSession(session *SessionData) (ret *WorkspaceSession) {
 	ret = &WorkspaceSession{}
 	if nil == session.Workspaces {
