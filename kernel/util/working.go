@@ -427,50 +427,6 @@ func initPathDir() {
 	}
 }
 
-// InitPathDirByUser 根据用户编号初始化用户的目录结构。
-// 该函数会创建用户的数据文件夹、临时文件夹以及其子文件夹（如 assets, templates, widgets, plugins, emojis, public）。
-// 如果创建过程中发生错误且错误不是因为文件夹已存在，则会记录致命错误并退出程序。
-func InitPathDirByUser(userNo string) {
-	if "" == userNo {
-		return
-	}
-
-	if err := os.MkdirAll(DataDir+userNo, 0755); err != nil && !os.IsExist(err) {
-		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data folder [%s] failed: %s", DataDir, err)
-	}
-
-	assets := filepath.Join(DataDir+userNo, "assets")
-	if err := os.MkdirAll(assets, 0755); err != nil && !os.IsExist(err) {
-		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data assets folder [%s] failed: %s", assets, err)
-	}
-
-	templates := filepath.Join(DataDir+userNo, "templates")
-	if err := os.MkdirAll(templates, 0755); err != nil && !os.IsExist(err) {
-		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data templates folder [%s] failed: %s", templates, err)
-	}
-
-	widgets := filepath.Join(DataDir+userNo, "widgets")
-	if err := os.MkdirAll(widgets, 0755); err != nil && !os.IsExist(err) {
-		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data widgets folder [%s] failed: %s", widgets, err)
-	}
-
-	plugins := filepath.Join(DataDir+userNo, "plugins")
-	if err := os.MkdirAll(plugins, 0755); err != nil && !os.IsExist(err) {
-		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data plugins folder [%s] failed: %s", widgets, err)
-	}
-
-	emojis := filepath.Join(DataDir+userNo, "emojis")
-	if err := os.MkdirAll(emojis, 0755); err != nil && !os.IsExist(err) {
-		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data emojis folder [%s] failed: %s", widgets, err)
-	}
-
-	// Support directly access `data/public/*` contents via URL link https://github.com/siyuan-note/siyuan/issues/8593
-	public := filepath.Join(DataDir+userNo, "public")
-	if err := os.MkdirAll(public, 0755); err != nil && !os.IsExist(err) {
-		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data public folder [%s] failed: %s", widgets, err)
-	}
-}
-
 func initMime() {
 	// 在某版本的 Windows 10 操作系统上界面样式异常问题
 	// https://github.com/siyuan-note/siyuan/issues/247

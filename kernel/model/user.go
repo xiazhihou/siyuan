@@ -33,8 +33,12 @@ func IsValidUser(user string) bool {
 }
 
 func GetGinContextUser(c *gin.Context) string {
-	if user, exists := c.Get(UserContextKey); exists {
-		return user.(string)
+	if c != nil {
+		if user, exists := c.Get(UserContextKey); exists {
+			return user.(string)
+		} else {
+			return ""
+		}
 	} else {
 		return ""
 	}

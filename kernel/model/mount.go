@@ -28,13 +28,15 @@ import (
 
 	"github.com/88250/gulu"
 	"github.com/88250/lute/ast"
+	"github.com/gin-gonic/gin"
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/siyuan/kernel/task"
 	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
-func CreateBox(name string) (id string, err error) {
+func CreateBox(c *gin.Context, name string) (id string, err error) {
+	userNo := GetGinContextUser(c)
 	name = gulu.Str.RemoveInvisible(name)
 	if 512 < utf8.RuneCountInString(name) {
 		// 限制笔记本名和文档名最大长度为 `512` https://github.com/siyuan-note/siyuan/issues/6299
@@ -50,7 +52,7 @@ func CreateBox(name string) (id string, err error) {
 	createDocLock.Lock()
 	defer createDocLock.Unlock()
 
-	id = ast.NewNodeID()
+	id = userNo + "_" + ast.NewNodeID()
 	boxLocalPath := filepath.Join(util.DataDir, id)
 	err = os.MkdirAll(boxLocalPath, 0755)
 	if err != nil {

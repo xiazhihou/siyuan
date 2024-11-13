@@ -768,7 +768,7 @@ func (conf *AppConf) BoxNames(boxIDs []string) (ret map[string]string) {
 
 func (conf *AppConf) GetBoxes() (ret []*Box) {
 	ret = []*Box{}
-	notebooks, err := ListNotebooks()
+	notebooks, err := ListNotebooks(nil)
 	if err != nil {
 		return
 	}
@@ -785,10 +785,12 @@ func (conf *AppConf) GetBoxes() (ret []*Box) {
 
 func (conf *AppConf) GetOpenedBoxes() (ret []*Box) {
 	ret = []*Box{}
-	notebooks, err := ListNotebooks()
+	notebooks, err := ListNotebooks(nil)
 	if err != nil {
 		return
 	}
+
+	logging.LogInfof("read notebooks list: %s", notebooks)
 
 	for _, notebook := range notebooks {
 		if !notebook.Closed {
@@ -800,7 +802,7 @@ func (conf *AppConf) GetOpenedBoxes() (ret []*Box) {
 
 func (conf *AppConf) GetClosedBoxes() (ret []*Box) {
 	ret = []*Box{}
-	notebooks, err := ListNotebooks()
+	notebooks, err := ListNotebooks(nil)
 	if err != nil {
 		return
 	}

@@ -164,6 +164,11 @@ func JsonArg(c *gin.Context, result *gulu.Result) (arg map[string]interface{}, o
 }
 
 func InvalidIDPattern(idArg string, result *gulu.Result) bool {
+	if strings.Contains(idArg, "_") {
+		parts := strings.Split(idArg, "_")
+		idArg = parts[1]
+	}
+
 	if ast.IsNodeIDPattern(idArg) {
 		return false
 	}

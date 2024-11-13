@@ -108,7 +108,7 @@ func ClearWorkspaceHistory() (err error) {
 
 	// 以下部分是老版本的清理逻辑，暂时保留
 
-	notebooks, err := ListNotebooks()
+	notebooks, err := ListNotebooks(nil)
 	if err != nil {
 		return
 	}

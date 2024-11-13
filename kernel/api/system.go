@@ -426,8 +426,6 @@ func getConf(c *gin.Context) {
 
 	user := model.GetGinContextUser(c)
 	logging.LogInfof("get current GetGinContextUser: %s", user)
-	// 初始化用户目录
-	util.InitPathDirByUser(user)
 
 	maskedConf, err := model.GetMaskedConf()
 	if err != nil {

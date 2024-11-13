@@ -35,6 +35,7 @@ import (
 	"github.com/88250/lute/lex"
 	"github.com/88250/lute/parse"
 	"github.com/araddon/dateparse"
+	"github.com/gin-gonic/gin"
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/siyuan/kernel/cache"
@@ -86,13 +87,16 @@ func StatJob() {
 	}
 }
 
-func ListNotebooks() (ret []*Box, err error) {
+func ListNotebooks(c *gin.Context) (ret []*Box, err error) {
 	ret = []*Box{}
+	userNo := GetGinContextUser(c)
+
 	dirs, err := os.ReadDir(util.DataDir)
 	if err != nil {
 		logging.LogErrorf("read dir [%s] failed: %s", util.DataDir, err)
 		return ret, err
 	}
+	logging.LogInfof("read dir [%s] list: %s", util.DataDir, dirs)
 	for _, dir := range dirs {
 		if util.IsReservedFilename(dir.Name()) {
 			continue
@@ -102,7 +106,17 @@ func ListNotebooks() (ret []*Box, err error) {
 			continue
 		}
 
-		if !ast.IsNodeIDPattern(dir.Name()) {
+		if !strings.HasPrefix(dir.Name(), userNo) {
+			logging.LogInfof("found a corrupted box [%s], current user: %s", dir.Name(), userNo)
+			continue
+		}
+
+		dirName := dir.Name()
+		if strings.Contains(dirName, "_") {
+			parts := strings.Split(dirName, "_")
+			dirName = parts[1]
+		}
+		if !ast.IsNodeIDPattern(dirName) {
 			continue
 		}
 

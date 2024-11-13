@@ -163,7 +163,7 @@ func createNotebook(c *gin.Context) {
 	}
 
 	name := arg["name"].(string)
-	id, err := model.CreateBox(name)
+	id, err := model.CreateBox(c, name)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -415,7 +415,7 @@ func lsNotebooks(c *gin.Context) {
 		notebooks = model.GetFlashcardNotebooks()
 	} else {
 		var err error
-		notebooks, err = model.ListNotebooks()
+		notebooks, err = model.ListNotebooks(c)
 		if err != nil {
 			return
 		}

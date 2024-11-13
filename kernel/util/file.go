@@ -331,7 +331,7 @@ func CeilSize(size int64) int64 {
 }
 
 func IsReservedFilename(baseName string) bool {
-	return "assets" == baseName || "templates" == baseName || "widgets" == baseName || "emojis" == baseName || ".siyuan" == baseName || strings.HasPrefix(baseName, ".")
+	return "plugins" == baseName || "storage" == baseName || "public" == baseName || "assets" == baseName || "templates" == baseName || "widgets" == baseName || "emojis" == baseName || ".siyuan" == baseName || strings.HasPrefix(baseName, ".")
 }
 
 func WalkWithSymlinks(root string, fn filepath.WalkFunc) error {
