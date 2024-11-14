@@ -6,8 +6,14 @@ import {processMessage} from "./processMessage";
 import {kernelError} from "../dialog/processSystem";
 
 export const fetchPost = (url: string, data?: any, cb?: (response: IWebSocketData) => void, headers?: IObject) => {
+    const token = getCookie('Authorization');
+
     const init: RequestInit = {
         method: "POST",
+        headers: {
+            ...headers,
+            'Authorization': token ? `Bearer ${token}` : ''
+        }
     };
     if (data) {
         if (["/api/search/searchRefBlock", "/api/graph/getGraph", "/api/graph/getLocalGraph"].includes(url)) {
@@ -100,7 +106,14 @@ export const fetchSyncPost = async (url: string, data?: any) => {
 };
 
 export const fetchGet = (url: string, cb: (response: IWebSocketData | IObject | string) => void) => {
-    fetch(url).then((response) => {
+    // 获取 Authorization 值
+    const token = getCookie('Authorization');
+
+    fetch(url, {
+        headers: {
+            'Authorization': token ? `Bearer ${token}` : '',
+        }
+    }).then((response) => {
         if (response.headers.get("content-type")?.indexOf("application/json") > -1) {
             return response.json();
         } else {
@@ -109,4 +122,17 @@ export const fetchGet = (url: string, cb: (response: IWebSocketData | IObject | 
     }).then((response) => {
         cb(response);
     });
+};
+
+
+// 从 Cookie 中获取指定名称的值
+const getCookie = (name: string): string | undefined => {
+    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+    for (const cookie of cookies) {
+        const [key, value] = cookie.split('=');
+        if (key === name) {
+            return decodeURIComponent(value);
+        }
+    }
+    return undefined;
 };
