@@ -21,12 +21,13 @@ import (
 
 	"github.com/88250/lute/ast"
 	"github.com/88250/lute/parse"
+	"github.com/gin-gonic/gin"
 	"github.com/siyuan-note/siyuan/kernel/sql"
 	"github.com/siyuan-note/siyuan/kernel/treenode"
 	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
-func ListItem2Doc(srcListItemID, targetBoxID, targetPath string) (srcRootBlockID, newTargetPath string, err error) {
+func ListItem2Doc(c *gin.Context, srcListItemID, targetBoxID, targetPath string) (srcRootBlockID, newTargetPath string, err error) {
 	srcTree, _ := LoadTreeByBlockID(srcListItemID)
 	if nil == srcTree {
 		err = ErrBlockNotFound
@@ -40,7 +41,7 @@ func ListItem2Doc(srcListItemID, targetBoxID, targetPath string) (srcRootBlockID
 		return
 	}
 
-	box := Conf.Box(targetBoxID)
+	box := Conf.Box(c, targetBoxID)
 	listItemText := sql.GetContainerText(listItemNode)
 	listItemText = util.FilterFileName(listItemText)
 
@@ -107,7 +108,7 @@ func ListItem2Doc(srcListItemID, targetBoxID, targetPath string) (srcRootBlockID
 	newTree.Box, newTree.Path = targetBoxID, newTargetPath
 	newTree.Root.SetIALAttr("updated", util.CurrentTimeSecondsStr())
 	newTree.Root.Spec = "1"
-	box.addMinSort(path.Dir(newTargetPath), newTree.ID)
+	box.addMinSort(c, path.Dir(newTargetPath), newTree.ID)
 	if err = indexWriteTreeUpsertQueue(newTree); err != nil {
 		return "", "", err
 	}

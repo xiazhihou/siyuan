@@ -113,7 +113,7 @@ func getBacklink2(c *gin.Context) {
 	if val, ok := arg["containChildren"]; ok {
 		containChildren = val.(bool)
 	}
-	boxID, backlinks, backmentions, linkRefsCount, mentionsCount := model.GetBacklink2(id, keyword, mentionKeyword, sort, mentionSort, containChildren)
+	boxID, backlinks, backmentions, linkRefsCount, mentionsCount := model.GetBacklink2(c, id, keyword, mentionKeyword, sort, mentionSort, containChildren)
 	ret.Data = map[string]interface{}{
 		"backlinks":     backlinks,
 		"linkRefsCount": linkRefsCount,

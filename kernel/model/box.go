@@ -91,12 +91,11 @@ func ListNotebooks(c *gin.Context) (ret []*Box, err error) {
 	ret = []*Box{}
 	userNo := GetGinContextUser(c)
 
-	dirs, err := os.ReadDir(util.DataDir)
+	dirs, err := os.ReadDir(filepath.Join(util.DataDir, userNo))
 	if err != nil {
-		logging.LogErrorf("read dir [%s] failed: %s", util.DataDir, err)
+		logging.LogErrorf("read dir [%s], user[%s] failed: %s", util.DataDir, userNo, err)
 		return ret, err
 	}
-	logging.LogInfof("read dir [%s] list: %s", util.DataDir, dirs)
 	for _, dir := range dirs {
 		if util.IsReservedFilename(dir.Name()) {
 			continue
@@ -106,22 +105,12 @@ func ListNotebooks(c *gin.Context) (ret []*Box, err error) {
 			continue
 		}
 
-		if !strings.HasPrefix(dir.Name(), userNo) {
-			logging.LogInfof("found a corrupted box [%s], current user: %s", dir.Name(), userNo)
-			continue
-		}
-
-		dirName := dir.Name()
-		if strings.Contains(dirName, "_") {
-			parts := strings.Split(dirName, "_")
-			dirName = parts[1]
-		}
-		if !ast.IsNodeIDPattern(dirName) {
+		if !ast.IsNodeIDPattern(dir.Name()) {
 			continue
 		}
 
 		boxConf := conf.NewBoxConf()
-		boxDirPath := filepath.Join(util.DataDir, dir.Name())
+		boxDirPath := filepath.Join(filepath.Join(util.DataDir, userNo), dir.Name())
 		boxConfPath := filepath.Join(boxDirPath, ".siyuan", "conf.json")
 		isExistConf := filelock.IsExist(boxConfPath)
 		if !isExistConf {
@@ -152,7 +141,7 @@ func ListNotebooks(c *gin.Context) (ret []*Box, err error) {
 
 		if !isExistConf {
 			// Automatically create notebook conf.json if not found it https://github.com/siyuan-note/siyuan/issues/9647
-			box.SaveConf(boxConf)
+			box.SaveConf(c, boxConf)
 			box.Unindex()
 			logging.LogWarnf("fixed a corrupted box [%s]", boxDirPath)
 		}
@@ -190,10 +179,11 @@ func ListNotebooks(c *gin.Context) (ret []*Box, err error) {
 	return
 }
 
-func (box *Box) GetConf() (ret *conf.BoxConf) {
+func (box *Box) GetConf(c *gin.Context) (ret *conf.BoxConf) {
 	ret = conf.NewBoxConf()
+	userNo := GetGinContextUser(c)
 
-	confPath := filepath.Join(util.DataDir, box.ID, ".siyuan/conf.json")
+	confPath := filepath.Join(util.DataDir, userNo, box.ID, ".siyuan/conf.json")
 	if !filelock.IsExist(confPath) {
 		return
 	}
@@ -211,8 +201,9 @@ func (box *Box) GetConf() (ret *conf.BoxConf) {
 	return
 }
 
-func (box *Box) SaveConf(conf *conf.BoxConf) {
-	confPath := filepath.Join(util.DataDir, box.ID, ".siyuan/conf.json")
+func (box *Box) SaveConf(c *gin.Context, conf *conf.BoxConf) {
+	userNo := GetGinContextUser(c)
+	confPath := filepath.Join(util.DataDir, userNo, box.ID, ".siyuan/conf.json")
 	newData, err := gulu.JSON.MarshalIndentJSON(conf, "", "  ")
 	if err != nil {
 		logging.LogErrorf("marshal box conf [%s] failed: %s", confPath, err)
@@ -465,7 +456,7 @@ func isSkipFile(filename string) bool {
 	return strings.HasPrefix(filename, ".") || "node_modules" == filename || "dist" == filename || "target" == filename
 }
 
-func moveTree(tree *parse.Tree) {
+func moveTree(c *gin.Context, tree *parse.Tree) {
 	treenode.SetBlockTreePath(tree)
 
 	if hidden := tree.Root.IALAttr("custom-hidden"); "true" == hidden {
@@ -476,7 +467,7 @@ func moveTree(tree *parse.Tree) {
 	sql.RemoveTreeQueue(tree.ID)
 	sql.IndexTreeQueue(tree)
 
-	box := Conf.Box(tree.Box)
+	box := Conf.Box(c, tree.Box)
 	box.renameSubTrees(tree)
 }
 
@@ -684,7 +675,7 @@ func fullReindex() {
 	}
 
 	sql.IndexIgnoreCached = false
-	openedBoxes := Conf.GetOpenedBoxes()
+	openedBoxes := Conf.GetOpenedBoxes(nil)
 	for _, openedBox := range openedBoxes {
 		index(openedBox.ID)
 	}
@@ -692,27 +683,27 @@ func fullReindex() {
 	debug.FreeOSMemory()
 }
 
-func ChangeBoxSort(boxIDs []string) {
+func ChangeBoxSort(c *gin.Context, boxIDs []string) {
 	for i, boxID := range boxIDs {
 		box := &Box{ID: boxID}
-		boxConf := box.GetConf()
+		boxConf := box.GetConf(c)
 		boxConf.Sort = i + 1
-		box.SaveConf(boxConf)
+		box.SaveConf(c, boxConf)
 	}
 }
 
-func SetBoxIcon(boxID, icon string) {
+func SetBoxIcon(c *gin.Context, boxID, icon string) {
 	box := &Box{ID: boxID}
-	boxConf := box.GetConf()
+	boxConf := box.GetConf(c)
 	boxConf.Icon = icon
-	box.SaveConf(boxConf)
+	box.SaveConf(c, boxConf)
 }
 
 func (box *Box) UpdateHistoryGenerated() {
 	boxLatestHistoryTime[box.ID] = time.Now()
 }
 
-func getBoxesByPaths(paths []string) (ret map[string]*Box) {
+func getBoxesByPaths(c *gin.Context, paths []string) (ret map[string]*Box) {
 	ret = map[string]*Box{}
 	var ids []string
 	for _, p := range paths {
@@ -723,7 +714,7 @@ func getBoxesByPaths(paths []string) (ret map[string]*Box) {
 	for _, id := range ids {
 		bt := bts[id]
 		if nil != bt {
-			ret[bt.Path] = Conf.Box(bt.BoxID)
+			ret[bt.Path] = Conf.Box(c, bt.BoxID)
 		}
 	}
 	return

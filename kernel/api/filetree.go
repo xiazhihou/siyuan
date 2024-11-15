@@ -233,8 +233,8 @@ func heading2Doc(c *gin.Context) {
 	}
 
 	name := path.Base(targetPath)
-	box := model.Conf.Box(targetNotebook)
-	files, _, _ := model.ListDocTree(targetNotebook, path.Dir(targetPath), util.SortModeUnassigned, false, false, model.Conf.FileTree.MaxListCount)
+	box := model.Conf.Box(c, targetNotebook)
+	files, _, _ := model.ListDocTree(c, targetNotebook, path.Dir(targetPath), util.SortModeUnassigned, false, false, model.Conf.FileTree.MaxListCount)
 	evt := util.NewCmdResult("heading2doc", 0, util.PushModeBroadcast)
 	evt.Data = map[string]interface{}{
 		"box":            box,
@@ -260,7 +260,7 @@ func li2Doc(c *gin.Context) {
 	srcListItemID := arg["srcListItemID"].(string)
 	targetNotebook := arg["targetNoteBook"].(string)
 	targetPath := arg["targetPath"].(string)
-	srcRootBlockID, targetPath, err := model.ListItem2Doc(srcListItemID, targetNotebook, targetPath)
+	srcRootBlockID, targetPath, err := model.ListItem2Doc(c, srcListItemID, targetNotebook, targetPath)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -278,8 +278,8 @@ func li2Doc(c *gin.Context) {
 	}
 
 	name := path.Base(targetPath)
-	box := model.Conf.Box(targetNotebook)
-	files, _, _ := model.ListDocTree(targetNotebook, path.Dir(targetPath), util.SortModeUnassigned, false, false, model.Conf.FileTree.MaxListCount)
+	box := model.Conf.Box(c, targetNotebook)
+	files, _, _ := model.ListDocTree(c, targetNotebook, path.Dir(targetPath), util.SortModeUnassigned, false, false, model.Conf.FileTree.MaxListCount)
 	evt := util.NewCmdResult("li2doc", 0, util.PushModeBroadcast)
 	evt.Data = map[string]interface{}{
 		"box":            box,
@@ -332,7 +332,7 @@ func getHPathsByPaths(c *gin.Context) {
 	for _, p := range pathsArg {
 		paths = append(paths, p.(string))
 	}
-	hPath, err := model.GetHPathsByPaths(paths)
+	hPath, err := model.GetHPathsByPaths(c, paths)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -400,7 +400,7 @@ func getFullHPathByID(c *gin.Context) {
 	}
 
 	id := arg["id"].(string)
-	hPath, err := model.GetFullHPathByID(id)
+	hPath, err := model.GetFullHPathByID(c, id)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -461,7 +461,7 @@ func moveDocs(c *gin.Context) {
 
 	callback := arg["callback"]
 
-	err := model.MoveDocs(fromPaths, toNotebook, toPath, callback)
+	err := model.MoveDocs(c, fromPaths, toNotebook, toPath, callback)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -485,7 +485,7 @@ func removeDoc(c *gin.Context) {
 	}
 
 	p := arg["path"].(string)
-	model.RemoveDoc(notebook, p)
+	model.RemoveDoc(c, notebook, p)
 }
 
 func removeDocs(c *gin.Context) {
@@ -502,7 +502,7 @@ func removeDocs(c *gin.Context) {
 	for _, path := range pathsArg {
 		paths = append(paths, path.(string))
 	}
-	model.RemoveDocs(paths)
+	model.RemoveDocs(c, paths)
 }
 
 func renameDoc(c *gin.Context) {
@@ -522,7 +522,7 @@ func renameDoc(c *gin.Context) {
 	p := arg["path"].(string)
 	title := arg["title"].(string)
 
-	err := model.RenameDoc(notebook, p, title)
+	err := model.RenameDoc(c, notebook, p, title)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -550,9 +550,9 @@ func duplicateDoc(c *gin.Context) {
 	}
 
 	notebook := tree.Box
-	box := model.Conf.Box(notebook)
+	box := model.Conf.Box(c, notebook)
 	model.DuplicateDoc(tree)
-	pushCreate(box, tree.Path, tree.ID, arg)
+	pushCreate(c, box, tree.Path, tree.ID, arg)
 
 	ret.Data = map[string]interface{}{
 		"id":       tree.Root.ID,
@@ -583,7 +583,7 @@ func createDoc(c *gin.Context) {
 		}
 	}
 
-	tree, err := model.CreateDocByMd(notebook, p, title, md, sorts)
+	tree, err := model.CreateDocByMd(c, notebook, p, title, md, sorts)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -592,8 +592,8 @@ func createDoc(c *gin.Context) {
 	}
 
 	model.FlushTxQueue()
-	box := model.Conf.Box(notebook)
-	pushCreate(box, p, tree.Root.ID, arg)
+	box := model.Conf.Box(c, notebook)
+	pushCreate(c, box, p, tree.Root.ID, arg)
 
 	ret.Data = map[string]interface{}{
 		"id": tree.Root.ID,
@@ -610,7 +610,7 @@ func createDailyNote(c *gin.Context) {
 	}
 
 	notebook := arg["notebook"].(string)
-	p, existed, err := model.CreateDailyNote(notebook)
+	p, existed, err := model.CreateDailyNote(c, notebook)
 	if err != nil {
 		if model.ErrBoxNotFound == err {
 			ret.Code = 1
@@ -622,7 +622,7 @@ func createDailyNote(c *gin.Context) {
 	}
 
 	model.FlushTxQueue()
-	box := model.Conf.Box(notebook)
+	box := model.Conf.Box(c, notebook)
 	luteEngine := util.NewLute()
 	tree, err := filesys.LoadTree(box.ID, p, luteEngine)
 	if err != nil {
@@ -642,7 +642,7 @@ func createDailyNote(c *gin.Context) {
 		evt := util.NewCmdResult("createdailynote", 0, util.PushModeBroadcast)
 		evt.AppId = app
 		name := path.Base(p)
-		files, _, _ := model.ListDocTree(box.ID, path.Dir(p), util.SortModeUnassigned, false, false, model.Conf.FileTree.MaxListCount)
+		files, _, _ := model.ListDocTree(c, box.ID, path.Dir(p), util.SortModeUnassigned, false, false, model.Conf.FileTree.MaxListCount)
 		evt.Data = map[string]interface{}{
 			"box":   box,
 			"path":  p,
@@ -712,7 +712,7 @@ func createDocWithMd(c *gin.Context) {
 		withMath = withMathArg.(bool)
 	}
 
-	id, err := model.CreateWithMarkdown(tags, notebook, hPath, markdown, parentID, id, withMath)
+	id, err := model.CreateWithMarkdown(c, tags, notebook, hPath, markdown, parentID, id, withMath)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -721,10 +721,10 @@ func createDocWithMd(c *gin.Context) {
 	ret.Data = id
 
 	model.FlushTxQueue()
-	box := model.Conf.Box(notebook)
+	box := model.Conf.Box(c, notebook)
 	b, _ := model.GetBlock(id, nil)
 	p := b.Path
-	pushCreate(box, p, id, arg)
+	pushCreate(c, box, p, id, arg)
 }
 
 func getDocCreateSavePath(c *gin.Context) {
@@ -737,11 +737,11 @@ func getDocCreateSavePath(c *gin.Context) {
 	}
 
 	notebook := arg["notebook"].(string)
-	box := model.Conf.Box(notebook)
+	box := model.Conf.Box(c, notebook)
 	var docCreateSaveBox string
 	docCreateSavePathTpl := model.Conf.FileTree.DocCreateSavePath
 	if nil != box {
-		boxConf := box.GetConf()
+		boxConf := box.GetConf(c)
 		docCreateSaveBox = boxConf.DocCreateSaveBox
 		docCreateSavePathTpl = boxConf.DocCreateSavePath
 	}
@@ -749,7 +749,7 @@ func getDocCreateSavePath(c *gin.Context) {
 		docCreateSaveBox = model.Conf.FileTree.DocCreateSaveBox
 	}
 	if "" != docCreateSaveBox {
-		if nil == model.Conf.Box(docCreateSaveBox) {
+		if nil == model.Conf.Box(c, docCreateSaveBox) {
 			// 如果配置的笔记本未打开或者不存在，则使用当前笔记本
 			docCreateSaveBox = notebook
 		}
@@ -792,11 +792,11 @@ func getRefCreateSavePath(c *gin.Context) {
 	}
 
 	notebook := arg["notebook"].(string)
-	box := model.Conf.Box(notebook)
+	box := model.Conf.Box(c, notebook)
 	var refCreateSaveBox string
 	refCreateSavePathTpl := model.Conf.FileTree.RefCreateSavePath
 	if nil != box {
-		boxConf := box.GetConf()
+		boxConf := box.GetConf(c)
 		refCreateSaveBox = boxConf.RefCreateSaveBox
 		refCreateSavePathTpl = boxConf.RefCreateSavePath
 	}
@@ -804,7 +804,7 @@ func getRefCreateSavePath(c *gin.Context) {
 		refCreateSaveBox = model.Conf.FileTree.RefCreateSaveBox
 	}
 	if "" != refCreateSaveBox {
-		if nil == model.Conf.Box(refCreateSaveBox) {
+		if nil == model.Conf.Box(c, refCreateSaveBox) {
 			// 如果配置的笔记本未打开或者不存在，则使用当前笔记本
 			refCreateSaveBox = notebook
 		}
@@ -850,7 +850,7 @@ func changeSort(c *gin.Context) {
 	for _, p := range pathsArg {
 		paths = append(paths, p.(string))
 	}
-	model.ChangeFileTreeSort(notebook, paths)
+	model.ChangeFileTreeSort(c, notebook, paths)
 }
 
 func searchDocs(c *gin.Context) {
@@ -868,7 +868,7 @@ func searchDocs(c *gin.Context) {
 	}
 
 	k := arg["k"].(string)
-	ret.Data = model.SearchDocsByKeyword(k, flashcard)
+	ret.Data = model.SearchDocsByKeyword(c, k, flashcard)
 }
 
 func listDocsByPath(c *gin.Context) {
@@ -904,7 +904,7 @@ func listDocsByPath(c *gin.Context) {
 		showHidden = arg["showHidden"].(bool)
 	}
 
-	files, totals, err := model.ListDocTree(notebook, p, sortMode, flashcard, showHidden, maxListCount)
+	files, totals, err := model.ListDocTree(c, notebook, p, sortMode, flashcard, showHidden, maxListCount)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -1016,10 +1016,10 @@ func getDoc(c *gin.Context) {
 	}
 }
 
-func pushCreate(box *model.Box, p, treeID string, arg map[string]interface{}) {
+func pushCreate(c *gin.Context, box *model.Box, p, treeID string, arg map[string]interface{}) {
 	evt := util.NewCmdResult("create", 0, util.PushModeBroadcast)
 	name := path.Base(p)
-	files, _, _ := model.ListDocTree(box.ID, path.Dir(p), util.SortModeUnassigned, false, false, model.Conf.FileTree.MaxListCount)
+	files, _, _ := model.ListDocTree(c, box.ID, path.Dir(p), util.SortModeUnassigned, false, false, model.Conf.FileTree.MaxListCount)
 	evt.Data = map[string]interface{}{
 		"box":   box,
 		"path":  p,

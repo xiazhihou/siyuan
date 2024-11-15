@@ -37,6 +37,7 @@ import (
 	"github.com/88250/lute/html"
 	"github.com/88250/lute/parse"
 	util2 "github.com/88250/lute/util"
+	"github.com/gin-gonic/gin"
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/riff"
@@ -139,7 +140,7 @@ func (box *Box) moveCorruptedData(filePath string) {
 	logging.LogWarnf("moved corrupted data file [%s] to [%s]", filePath, to)
 }
 
-func SearchDocsByKeyword(keyword string, flashcard bool) (ret []map[string]string) {
+func SearchDocsByKeyword(c *gin.Context, keyword string, flashcard bool) (ret []map[string]string) {
 	ret = []map[string]string{}
 
 	var deck *riff.Deck
@@ -153,7 +154,7 @@ func SearchDocsByKeyword(keyword string, flashcard bool) (ret []map[string]strin
 		deckBlockIDs = deck.GetBlockIDs()
 	}
 
-	openedBoxes := Conf.GetOpenedBoxes()
+	openedBoxes := Conf.GetOpenedBoxes(c)
 	boxes := map[string]*Box{}
 	for _, box := range openedBoxes {
 		boxes[box.ID] = box
@@ -230,7 +231,7 @@ type FileInfo struct {
 	isdir bool
 }
 
-func ListDocTree(boxID, listPath string, sortMode int, flashcard, showHidden bool, maxListCount int) (ret []*File, totals int, err error) {
+func ListDocTree(c *gin.Context, boxID, listPath string, sortMode int, flashcard, showHidden bool, maxListCount int) (ret []*File, totals int, err error) {
 	//os.MkdirAll("pprof", 0755)
 	//cpuProfile, _ := os.Create("pprof/cpu_profile_list_doc_tree")
 	//pprof.StartCPUProfile(cpuProfile)
@@ -249,12 +250,12 @@ func ListDocTree(boxID, listPath string, sortMode int, flashcard, showHidden boo
 		deckBlockIDs = deck.GetBlockIDs()
 	}
 
-	box := Conf.Box(boxID)
+	box := Conf.Box(c, boxID)
 	if nil == box {
 		return nil, 0, errors.New(Conf.Language(0))
 	}
 
-	boxConf := box.GetConf()
+	boxConf := box.GetConf(c)
 
 	if util.SortModeUnassigned == sortMode {
 		sortMode = Conf.FileTree.Sort
@@ -1132,11 +1133,11 @@ func createTreeTx(tree *parse.Tree) {
 
 var createDocLock = sync.Mutex{}
 
-func CreateDocByMd(boxID, p, title, md string, sorts []string) (tree *parse.Tree, err error) {
+func CreateDocByMd(c *gin.Context, boxID, p, title, md string, sorts []string) (tree *parse.Tree, err error) {
 	createDocLock.Lock()
 	defer createDocLock.Unlock()
 
-	box := Conf.Box(boxID)
+	box := Conf.Box(c, boxID)
 	if nil == box {
 		err = errors.New(Conf.Language(0))
 		return
@@ -1144,21 +1145,21 @@ func CreateDocByMd(boxID, p, title, md string, sorts []string) (tree *parse.Tree
 
 	luteEngine := util.NewLute()
 	dom := luteEngine.Md2BlockDOM(md, false)
-	tree, err = createDoc(box.ID, p, title, dom)
+	tree, err = createDoc(c, box.ID, p, title, dom)
 	if err != nil {
 		return
 	}
 
 	FlushTxQueue()
-	ChangeFileTreeSort(box.ID, sorts)
+	ChangeFileTreeSort(c, box.ID, sorts)
 	return
 }
 
-func CreateWithMarkdown(tags, boxID, hPath, md, parentID, id string, withMath bool) (retID string, err error) {
+func CreateWithMarkdown(c *gin.Context, tags, boxID, hPath, md, parentID, id string, withMath bool) (retID string, err error) {
 	createDocLock.Lock()
 	defer createDocLock.Unlock()
 
-	box := Conf.Box(boxID)
+	box := Conf.Box(c, boxID)
 	if nil == box {
 		err = errors.New(Conf.Language(0))
 		return
@@ -1189,17 +1190,17 @@ func CreateWithMarkdown(tags, boxID, hPath, md, parentID, id string, withMath bo
 	return
 }
 
-func CreateDailyNote(boxID string) (p string, existed bool, err error) {
+func CreateDailyNote(c *gin.Context, boxID string) (p string, existed bool, err error) {
 	createDocLock.Lock()
 	defer createDocLock.Unlock()
 
-	box := Conf.Box(boxID)
+	box := Conf.Box(c, boxID)
 	if nil == box {
 		err = ErrBoxNotFound
 		return
 	}
 
-	boxConf := box.GetConf()
+	boxConf := box.GetConf(c)
 	if "" == boxConf.DailyNoteSavePath || "/" == boxConf.DailyNoteSavePath {
 		err = errors.New(Conf.Language(49))
 		return
@@ -1316,8 +1317,8 @@ func GetHPathByPath(boxID, p string) (hPath string, err error) {
 	return
 }
 
-func GetHPathsByPaths(paths []string) (hPaths []string, err error) {
-	pathsBoxes := getBoxesByPaths(paths)
+func GetHPathsByPaths(c *gin.Context, paths []string) (hPaths []string, err error) {
+	pathsBoxes := getBoxesByPaths(c, paths)
 	for p, box := range pathsBoxes {
 		if nil == box {
 			logging.LogWarnf("box not found by path [%s]", p)
@@ -1355,13 +1356,13 @@ func GetPathByID(id string) (path string, err error) {
 	return
 }
 
-func GetFullHPathByID(id string) (hPath string, err error) {
+func GetFullHPathByID(c *gin.Context, id string) (hPath string, err error) {
 	tree, err := LoadTreeByBlockID(id)
 	if err != nil {
 		return
 	}
 
-	box := Conf.Box(tree.Box)
+	box := Conf.Box(c, tree.Box)
 	if nil == box {
 		err = ErrBoxNotFound
 		return
@@ -1387,8 +1388,8 @@ func GetIDsByHPath(hpath, boxID string) (ret []string, err error) {
 	return
 }
 
-func MoveDocs(fromPaths []string, toBoxID, toPath string, callback interface{}) (err error) {
-	toBox := Conf.Box(toBoxID)
+func MoveDocs(c *gin.Context, fromPaths []string, toBoxID, toPath string, callback interface{}) (err error) {
+	toBox := Conf.Box(c, toBoxID)
 	if nil == toBox {
 		err = errors.New(Conf.Language(0))
 		return
@@ -1399,7 +1400,7 @@ func MoveDocs(fromPaths []string, toBoxID, toPath string, callback interface{}) 
 		return
 	}
 
-	pathsBoxes := getBoxesByPaths(fromPaths)
+	pathsBoxes := getBoxesByPaths(c, fromPaths)
 
 	if 1 == len(fromPaths) {
 		// 移动到自己的父文档下的情况相当于不移动，直接返回
@@ -1439,7 +1440,7 @@ func MoveDocs(fromPaths []string, toBoxID, toPath string, callback interface{}) 
 			util.PushEndlessProgress(fmt.Sprintf(Conf.Language(70), fmt.Sprintf("%d/%d", count, len(fromPaths))))
 		}
 
-		_, err = moveDoc(fromBox, fromPath, toBox, toPath, luteEngine, callback)
+		_, err = moveDoc(c, fromBox, fromPath, toBox, toPath, luteEngine, callback)
 		if err != nil {
 			return
 		}
@@ -1466,7 +1467,7 @@ func countSubDocs(box, p string) (ret int) {
 	return
 }
 
-func moveDoc(fromBox *Box, fromPath string, toBox *Box, toPath string, luteEngine *lute.Lute, callback interface{}) (newPath string, err error) {
+func moveDoc(c *gin.Context, fromBox *Box, fromPath string, toBox *Box, toPath string, luteEngine *lute.Lute, callback interface{}) (newPath string, err error) {
 	isSameBox := fromBox.ID == toBox.ID
 
 	if isSameBox {
@@ -1553,7 +1554,7 @@ func moveDoc(fromBox *Box, fromPath string, toBox *Box, toPath string, luteEngin
 			return
 		}
 
-		moveTree(tree)
+		moveTree(c, tree)
 	} else {
 		absFromPath := filepath.Join(util.DataDir, fromBox.ID, fromPath)
 		absToPath := filepath.Join(util.DataDir, toBox.ID, newPath)
@@ -1569,7 +1570,7 @@ func moveDoc(fromBox *Box, fromPath string, toBox *Box, toPath string, luteEngin
 			return
 		}
 
-		moveTree(tree)
+		moveTree(c, tree)
 		moveSorts(tree.ID, fromBox.ID, toBox.ID)
 	}
 
@@ -1608,8 +1609,8 @@ func moveDoc(fromBox *Box, fromPath string, toBox *Box, toPath string, luteEngin
 	return
 }
 
-func RemoveDoc(boxID, p string) {
-	box := Conf.Box(boxID)
+func RemoveDoc(c *gin.Context, boxID, p string) {
+	box := Conf.Box(c, boxID)
 	if nil == box {
 		return
 	}
@@ -1621,12 +1622,12 @@ func RemoveDoc(boxID, p string) {
 	return
 }
 
-func RemoveDocs(paths []string) {
+func RemoveDocs(c *gin.Context, paths []string) {
 	util.PushEndlessProgress(Conf.Language(116))
 	defer util.PushClearProgress()
 
 	paths = util.FilterSelfChildDocs(paths)
-	pathsBoxes := getBoxesByPaths(paths)
+	pathsBoxes := getBoxesByPaths(c, paths)
 	FlushTxQueue()
 	luteEngine := util.NewLute()
 	for p, box := range pathsBoxes {
@@ -1744,8 +1745,8 @@ func removeDoc0(tree *parse.Tree, childrenDir string) {
 	return
 }
 
-func RenameDoc(boxID, p, title string) (err error) {
-	box := Conf.Box(boxID)
+func RenameDoc(c *gin.Context, boxID, p, title string) (err error) {
+	box := Conf.Box(c, boxID)
 	if nil == box {
 		err = errors.New(Conf.Language(0))
 		return
@@ -1797,7 +1798,7 @@ func RenameDoc(boxID, p, title string) (err error) {
 	return
 }
 
-func createDoc(boxID, p, title, dom string) (tree *parse.Tree, err error) {
+func createDoc(c *gin.Context, boxID, p, title, dom string) (tree *parse.Tree, err error) {
 	title = removeInvisibleCharsInTitle(title)
 	if 512 < utf8.RuneCountInString(title) {
 		// 限制笔记本名和文档名最大长度为 `512` https://github.com/siyuan-note/siyuan/issues/6299
@@ -1821,7 +1822,7 @@ func createDoc(boxID, p, title, dom string) (tree *parse.Tree, err error) {
 		return
 	}
 
-	box := Conf.Box(boxID)
+	box := Conf.Box(c, boxID)
 	if nil == box {
 		err = errors.New(Conf.Language(0))
 		return
@@ -1974,13 +1975,13 @@ func moveSorts(rootID, fromBox, toBox string) {
 	}
 }
 
-func ChangeFileTreeSort(boxID string, paths []string) {
+func ChangeFileTreeSort(c *gin.Context, boxID string, paths []string) {
 	if 1 > len(paths) {
 		return
 	}
 
 	FlushTxQueue()
-	box := Conf.Box(boxID)
+	box := Conf.Box(c, boxID)
 	sortIDs := map[string]int{}
 	max := 0
 	for i, p := range paths {
@@ -2108,8 +2109,8 @@ func (box *Box) removeSort(ids []string) {
 	}
 }
 
-func (box *Box) addMinSort(parentPath, id string) {
-	docs, _, err := ListDocTree(box.ID, parentPath, util.SortModeUnassigned, false, false, 1)
+func (box *Box) addMinSort(c *gin.Context, parentPath, id string) {
+	docs, _, err := ListDocTree(c, box.ID, parentPath, util.SortModeUnassigned, false, false, 1)
 	if err != nil {
 		logging.LogErrorf("list doc tree failed: %s", err)
 		return

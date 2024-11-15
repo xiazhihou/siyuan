@@ -106,7 +106,7 @@ func appendDailyNoteBlock(c *gin.Context) {
 		}
 	}
 
-	p, _, err := model.CreateDailyNote(boxID)
+	p, _, err := model.CreateDailyNote(c, boxID)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = "create daily note failed: " + err.Error()
@@ -159,7 +159,7 @@ func prependDailyNoteBlock(c *gin.Context) {
 		}
 	}
 
-	p, _, err := model.CreateDailyNote(boxID)
+	p, _, err := model.CreateDailyNote(c, boxID)
 	if err != nil {
 		ret.Code = -1
 		ret.Msg = "create daily note failed: " + err.Error()

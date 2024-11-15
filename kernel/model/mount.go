@@ -52,8 +52,8 @@ func CreateBox(c *gin.Context, name string) (id string, err error) {
 	createDocLock.Lock()
 	defer createDocLock.Unlock()
 
-	id = userNo + "_" + ast.NewNodeID()
-	boxLocalPath := filepath.Join(util.DataDir, id)
+	id = ast.NewNodeID()
+	boxLocalPath := filepath.Join(util.DataDir, userNo, id)
 	err = os.MkdirAll(boxLocalPath, 0755)
 	if err != nil {
 		return

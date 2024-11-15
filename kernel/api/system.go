@@ -424,9 +424,7 @@ func getConf(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
 
-	user := model.GetGinContextUser(c)
-	logging.LogInfof("get current GetGinContextUser: %s", user)
-
+	util.InitPathUserDir(c)
 	maskedConf, err := model.GetMaskedConf()
 	if err != nil {
 		ret.Code = -1

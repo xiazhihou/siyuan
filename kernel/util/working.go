@@ -34,10 +34,12 @@ import (
 
 	"github.com/88250/gulu"
 	figure "github.com/common-nighthawk/go-figure"
+	"github.com/gin-gonic/gin"
 	"github.com/gofrs/flock"
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/httpclient"
 	"github.com/siyuan-note/logging"
+	"github.com/siyuan-note/siyuan/kernel/model"
 )
 
 // var Mode = "dev"
@@ -424,6 +426,15 @@ func initPathDir() {
 	public := filepath.Join(DataDir, "public")
 	if err := os.MkdirAll(public, 0755); err != nil && !os.IsExist(err) {
 		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create data public folder [%s] failed: %s", widgets, err)
+	}
+}
+
+func InitPathUserDir(c *gin.Context) {
+	userNo := model.GetGinContextUser(c)
+	userPath := filepath.Join(DataDir, userNo)
+
+	if err := os.MkdirAll(userPath, 0755); err != nil && !os.IsExist(err) {
+		logging.LogFatalf(logging.ExitCodeInitWorkspaceErr, "create user data folder [%s] failed: %s", userPath, err)
 	}
 }
 

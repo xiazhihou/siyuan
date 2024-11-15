@@ -48,7 +48,7 @@ func main() {
 	sql.SetIndexAssetPath(model.Conf.Search.IndexAssetPath)
 
 	model.BootSyncData()
-	model.InitBoxes()
+	model.InitBoxes(nil)
 	model.LoadFlashcards()
 	util.LoadAssetsTexts()
 

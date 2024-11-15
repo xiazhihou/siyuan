@@ -34,6 +34,7 @@ import (
 	"github.com/88250/lute/ast"
 	"github.com/Xuanwo/go-locale"
 	"github.com/getsentry/sentry-go"
+	"github.com/gin-gonic/gin"
 	"github.com/sashabaranov/go-openai"
 	"github.com/siyuan-note/eventbus"
 	"github.com/siyuan-note/filelock"
@@ -733,8 +734,8 @@ func (conf *AppConf) Close() {
 	conf.Save()
 }
 
-func (conf *AppConf) Box(boxID string) *Box {
-	for _, box := range conf.GetOpenedBoxes() {
+func (conf *AppConf) Box(c *gin.Context, boxID string) *Box {
+	for _, box := range conf.GetOpenedBoxes(c) {
 		if box.ID == boxID {
 			return box
 		}
@@ -742,8 +743,8 @@ func (conf *AppConf) Box(boxID string) *Box {
 	return nil
 }
 
-func (conf *AppConf) GetBox(boxID string) *Box {
-	for _, box := range conf.GetBoxes() {
+func (conf *AppConf) GetBox(c *gin.Context, boxID string) *Box {
+	for _, box := range conf.GetBoxes(c) {
 		if box.ID == boxID {
 			return box
 		}
@@ -751,10 +752,10 @@ func (conf *AppConf) GetBox(boxID string) *Box {
 	return nil
 }
 
-func (conf *AppConf) BoxNames(boxIDs []string) (ret map[string]string) {
+func (conf *AppConf) BoxNames(c *gin.Context, boxIDs []string) (ret map[string]string) {
 	ret = map[string]string{}
 
-	boxes := conf.GetOpenedBoxes()
+	boxes := conf.GetOpenedBoxes(c)
 	for _, boxID := range boxIDs {
 		for _, box := range boxes {
 			if box.ID == boxID {
@@ -766,9 +767,9 @@ func (conf *AppConf) BoxNames(boxIDs []string) (ret map[string]string) {
 	return
 }
 
-func (conf *AppConf) GetBoxes() (ret []*Box) {
+func (conf *AppConf) GetBoxes(c *gin.Context) (ret []*Box) {
 	ret = []*Box{}
-	notebooks, err := ListNotebooks(nil)
+	notebooks, err := ListNotebooks(c)
 	if err != nil {
 		return
 	}
@@ -783,9 +784,9 @@ func (conf *AppConf) GetBoxes() (ret []*Box) {
 	return
 }
 
-func (conf *AppConf) GetOpenedBoxes() (ret []*Box) {
+func (conf *AppConf) GetOpenedBoxes(c *gin.Context) (ret []*Box) {
 	ret = []*Box{}
-	notebooks, err := ListNotebooks(nil)
+	notebooks, err := ListNotebooks(c)
 	if err != nil {
 		return
 	}
@@ -800,9 +801,9 @@ func (conf *AppConf) GetOpenedBoxes() (ret []*Box) {
 	return
 }
 
-func (conf *AppConf) GetClosedBoxes() (ret []*Box) {
+func (conf *AppConf) GetClosedBoxes(c *gin.Context) (ret []*Box) {
 	ret = []*Box{}
-	notebooks, err := ListNotebooks(nil)
+	notebooks, err := ListNotebooks(c)
 	if err != nil {
 		return
 	}
@@ -831,9 +832,9 @@ func (conf *AppConf) language(num int) (ret string) {
 	return
 }
 
-func InitBoxes() {
+func InitBoxes(c *gin.Context) {
 	initialized := 0 < treenode.CountBlocks()
-	for _, box := range Conf.GetOpenedBoxes() {
+	for _, box := range Conf.GetOpenedBoxes(c) {
 		box.UpdateHistoryGenerated() // 初始化历史生成时间为当前时间
 
 		if !initialized {

@@ -42,7 +42,7 @@ func getNotebookInfo(c *gin.Context) {
 		return
 	}
 
-	box := model.Conf.Box(boxID)
+	box := model.Conf.Box(c, boxID)
 	if nil == box {
 		ret.Code = -1
 		ret.Msg = "notebook [" + boxID + "] not found"
@@ -66,7 +66,7 @@ func setNotebookIcon(c *gin.Context) {
 
 	boxID := arg["notebook"].(string)
 	icon := arg["icon"].(string)
-	model.SetBoxIcon(boxID, icon)
+	model.SetBoxIcon(c, boxID, icon)
 }
 
 func changeSortNotebook(c *gin.Context) {
@@ -83,7 +83,7 @@ func changeSortNotebook(c *gin.Context) {
 	for _, p := range idsArg {
 		ids = append(ids, p.(string))
 	}
-	model.ChangeBoxSort(ids)
+	model.ChangeBoxSort(c, ids)
 }
 
 func renameNotebook(c *gin.Context) {
@@ -177,7 +177,7 @@ func createNotebook(c *gin.Context) {
 		return
 	}
 
-	box := model.Conf.Box(id)
+	box := model.Conf.Box(c, id)
 	if nil == box {
 		ret.Code = -1
 		ret.Msg = "opened notebook [" + id + "] not found"
@@ -237,7 +237,7 @@ func openNotebook(c *gin.Context) {
 		return
 	}
 
-	box := model.Conf.Box(notebook)
+	box := model.Conf.Box(c, notebook)
 	if nil == box {
 		ret.Code = -1
 		ret.Msg = "opened notebook [" + notebook + "] not found"
@@ -312,7 +312,7 @@ func getNotebookConf(c *gin.Context) {
 		return
 	}
 
-	box := model.Conf.GetBox(notebook)
+	box := model.Conf.GetBox(c, notebook)
 	if nil == box {
 		ret.Code = -1
 		ret.Msg = "notebook [" + notebook + "] not found"
@@ -322,7 +322,7 @@ func getNotebookConf(c *gin.Context) {
 	ret.Data = map[string]interface{}{
 		"box":  box.ID,
 		"name": box.Name,
-		"conf": box.GetConf(),
+		"conf": box.GetConf(c),
 	}
 }
 
@@ -340,7 +340,7 @@ func setNotebookConf(c *gin.Context) {
 		return
 	}
 
-	box := model.Conf.GetBox(notebook)
+	box := model.Conf.GetBox(c, notebook)
 	if nil == box {
 		ret.Code = -1
 		ret.Msg = "notebook [" + notebook + "] not found"
@@ -354,7 +354,7 @@ func setNotebookConf(c *gin.Context) {
 		return
 	}
 
-	boxConf := box.GetConf()
+	boxConf := box.GetConf(c)
 	if err = gulu.JSON.UnmarshalJSON(param, boxConf); err != nil {
 		ret.Code = -1
 		ret.Msg = err.Error()
@@ -392,7 +392,7 @@ func setNotebookConf(c *gin.Context) {
 
 	boxConf.DocCreateSavePath = strings.TrimSpace(boxConf.DocCreateSavePath)
 
-	box.SaveConf(boxConf)
+	box.SaveConf(c, boxConf)
 	ret.Data = boxConf
 }
 
