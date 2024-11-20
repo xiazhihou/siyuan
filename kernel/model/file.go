@@ -1155,7 +1155,7 @@ func CreateDocByMd(c *gin.Context, boxID, p, title, md string, sorts []string) (
 	return
 }
 
-func CreateWithMarkdown(c *gin.Context, tags, boxID, hPath, md, parentID, id string, withMath bool) (retID string, err error) {
+func CreateWithMarkdown(c *gin.Context, tags, boxID, hPath, md, parentID, id string, withMath bool, clippingHref string) (retID string, err error) {
 	createDocLock.Lock()
 	defer createDocLock.Unlock()
 
@@ -1171,6 +1171,16 @@ func CreateWithMarkdown(c *gin.Context, tags, boxID, hPath, md, parentID, id str
 		luteEngine.SetInlineMath(true)
 	}
 	luteEngine.SetHTMLTag2TextMark(true)
+	if strings.HasPrefix(clippingHref, "https://ld246.com/article/") || strings.HasPrefix(clippingHref, "https://liuyun.io/article/") {
+		// 改进链滴剪藏 https://github.com/siyuan-note/siyuan/issues/13117
+		luteEngine.SetInlineAsterisk(true)
+		luteEngine.SetInlineUnderscore(true)
+		luteEngine.SetSup(true)
+		luteEngine.SetSub(true)
+		luteEngine.SetTag(true)
+		luteEngine.SetInlineMath(true)
+		luteEngine.SetGFMStrikethrough(true)
+	}
 	dom := luteEngine.Md2BlockDOM(md, false)
 	retID, err = createDocsByHPath(box.ID, hPath, dom, parentID, id)
 
@@ -1871,7 +1881,7 @@ func createDoc(c *gin.Context, boxID, p, title, dom string) (tree *parse.Tree, e
 	updated := util.TimeFromID(id)
 	tree.Root.KramdownIAL = [][]string{{"id", id}, {"title", html.EscapeAttrVal(title)}, {"updated", updated}}
 	if nil == tree.Root.FirstChild {
-		tree.Root.AppendChild(treenode.NewParagraph())
+		tree.Root.AppendChild(treenode.NewParagraph(""))
 	}
 
 	// 如果段落块中仅包含一个 mp3/mp4 超链接，则将其转换为音视频块

@@ -74,7 +74,7 @@ func ListItem2Doc(c *gin.Context, srcListItemID, targetBoxID, targetPath string)
 		children = append(children, c)
 	}
 	if 1 > len(children) {
-		newNode := treenode.NewParagraph()
+		newNode := treenode.NewParagraph("")
 		children = append(children, newNode)
 	}
 
@@ -98,7 +98,7 @@ func ListItem2Doc(c *gin.Context, srcListItemID, targetBoxID, targetPath string)
 	}
 	srcTree.Root.SetIALAttr("updated", util.CurrentTimeSecondsStr())
 	if nil == srcTree.Root.FirstChild {
-		srcTree.Root.AppendChild(treenode.NewParagraph())
+		srcTree.Root.AppendChild(treenode.NewParagraph(""))
 	}
 	treenode.RemoveBlockTreesByRootID(srcTree.ID)
 	if err = indexWriteTreeUpsertQueue(srcTree); err != nil {
