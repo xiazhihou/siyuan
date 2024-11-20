@@ -16,7 +16,8 @@ export const fetchPost = (url: string, data?: any, cb?: (response: IWebSocketDat
         }
     };
     if (data) {
-        if (["/api/search/searchRefBlock", "/api/graph/getGraph", "/api/graph/getLocalGraph"].includes(url)) {
+        if (["/api/search/searchRefBlock", "/api/graph/getGraph", "/api/graph/getLocalGraph",
+            "/api/block/getRecentUpdatedBlocks", "/api/search/fullTextSearchBlock"].includes(url)) {
             window.siyuan.reqIds[url] = new Date().getTime();
             if (data.type === "local" && url === "/api/graph/getLocalGraph") {
                 // 当打开文档A的关系图、关系图、文档A后刷新，由于防止请求重复处理，文档A关系图无法渲染。
@@ -60,7 +61,8 @@ export const fetchPost = (url: string, data?: any, cb?: (response: IWebSocketDat
             }
             return;
         }
-        if (["/api/search/searchRefBlock", "/api/graph/getGraph", "/api/graph/getLocalGraph"].includes(url)) {
+        if (["/api/search/searchRefBlock", "/api/graph/getGraph", "/api/graph/getLocalGraph",
+            "/api/block/getRecentUpdatedBlocks", "/api/search/fullTextSearchBlock"].includes(url)) {
             if (response.data.reqId && window.siyuan.reqIds[url] && window.siyuan.reqIds[url] > response.data.reqId) {
                 return;
             }
