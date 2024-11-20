@@ -423,8 +423,8 @@ func importConf(c *gin.Context) {
 func getConf(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
-
-	util.InitPathUserDir(c)
+	userNo := model.GetGinContextUser(c)
+	util.InitPathUserDir(userNo)
 	maskedConf, err := model.GetMaskedConf()
 	if err != nil {
 		ret.Code = -1

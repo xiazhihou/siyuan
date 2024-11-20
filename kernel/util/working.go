@@ -39,7 +39,6 @@ import (
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/httpclient"
 	"github.com/siyuan-note/logging"
-	"github.com/siyuan-note/siyuan/kernel/model"
 )
 
 // var Mode = "dev"
@@ -429,8 +428,7 @@ func initPathDir() {
 	}
 }
 
-func InitPathUserDir(c *gin.Context) {
-	userNo := model.GetGinContextUser(c)
+func InitPathUserDir(userNo string) {
 	userPath := filepath.Join(DataDir, userNo)
 
 	if err := os.MkdirAll(userPath, 0755); err != nil && !os.IsExist(err) {
